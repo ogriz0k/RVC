@@ -7,11 +7,15 @@ import librosa
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
+import torch
 
 sys.path.append(os.getcwd())
 
 from infer.lib.audio import load_audio
 from infer.lib.slicer import Slicer
+
+# Установка переменной окружения для управления памятью CUDA
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 inp_root = sys.argv[1]
 sr = int(sys.argv[2])
@@ -23,12 +27,10 @@ sr_trgt = sr
 
 f = open(f"{exp_dir}/logfile.log", "a+")
 
-
 def printt(strr):
     print(strr)
     f.write(f"{strr}\n")
     f.flush()
-
 
 class PreProcess:
     def __init__(self, sr, sr_trgt, exp_dir, per=3.0):
@@ -108,6 +110,8 @@ class PreProcess:
             printt(f"{path}\t-> Success")
         except Exception as e:
             printt(f"{path}\t-> {traceback.format_exc()}")
+        finally:
+            torch.cuda.empty_cache()  # Освобождение памяти GPU
 
     def pipeline_mp(self, infos):
         for path, idx0 in infos:
@@ -136,14 +140,19 @@ class PreProcess:
             printt(f"Ошибка! {traceback.format_exc()}")
             sys.exit(1)
 
-
 def preprocess_trainset(inp_root, sr, n_p, exp_dir, per):
     printt("Обработка датасета...")
     pp = PreProcess(sr, sr_trgt, exp_dir, per)
 
-    pp.pipeline_mp_inp_dir(inp_root, n_p)
+    # Проверка доступности нескольких GPU
+    if torch.cuda.device_count() > 1:
+        printt(f"Используются {torch.cuda.device_count()} GPU")
+        for i in range(torch.cuda.device_count()):
+            torch.cuda.set_device(i)
+            pp.pipeline_mp_inp_dir(inp_root, n_p)
+    else:
+        pp.pipeline_mp_inp_dir(inp_root, n_p)
     printt("Обработка успешно завершена!")
-
 
 if __name__ == "__main__":
     preprocess_trainset(inp_root, sr, n_p, exp_dir, per)
