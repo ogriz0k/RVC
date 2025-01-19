@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 def get_rms(
     y,
     frame_length=2048,
@@ -10,7 +9,7 @@ def get_rms(
 ):
     if isinstance(y, np.ndarray):
         y = torch.tensor(
-            y, device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            y, device=torch.device("cpu")  # Перемещение на CPU
         )
     elif not isinstance(y, torch.Tensor):
         raise ValueError("Input must be a numpy array or torch tensor")
@@ -36,8 +35,7 @@ def get_rms(
     x = xw[tuple(slices)]
 
     power = torch.mean(torch.abs(x) ** 2, dim=-2, keepdim=True)
-    return np.sqrt(power.cpu().numpy())
-
+    return np.sqrt(power.cpu().numpy())  # Возвращение на numpy
 
 class Slicer:
     def __init__(
