@@ -17,6 +17,9 @@ from infer.lib.slicer import Slicer
 # Установка переменной окружения для управления памятью CUDA
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
+# Установка метода запуска многопроцессорности на 'spawn'
+multiprocessing.set_start_method('spawn', force=True)
+
 inp_root = sys.argv[1]
 sr = int(sys.argv[2])
 n_p = int(sys.argv[3])
